@@ -19,10 +19,14 @@ class ViewController: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
     @IBAction func closeButtom(_ sender: Any) {
         dismiss(animated: true, completion: nil)
     }
-    var rootRef: DatabaseReference!
     var labsRef: DatabaseReference!
     var dbRef: DatabaseReference!
     var databaseHandleLab:DatabaseHandle!
+    
+    
+     var ref: DatabaseReference!
+    
+    
     
     var labnumber: String!
     var computernumber: String!
@@ -48,55 +52,31 @@ class ViewController: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
         
-        
-        rootRef = Database.database().reference()
         //dbRef = rootRef.child("cloud-b9835")
-        labsRef = rootRef.child("Labs")
- /*       let qrRef = labsRef.child("PC_01_L301")
-        //print(dbRef.key)
-        let labnumRef = qrRef.child("Laboratorio")
-        let compRef = qrRef.child("Computadora")
-        let floorRef = qrRef.child("Piso")
+
+   
         
-        databaseHandleLab = labnumRef.observe(DataEventType.value, with: { (snapshot) in
+        
+        
+       
+   /*     databaseHandleLab = Database.database().reference().child("Labs").observe(.value, with: { (snapshot) in
             
-            let lab = snapshot.value as? String
+            var newItems = [DataSnapshot]()
             
-            if let actualLab = lab {
-                print(actualLab)
-                self.labnumber = actualLab
+            for item in snapshot.children {
+                newItems.append(item as! DataSnapshot)
             }
-        }) { (Error) in
             
+        }){ (error) in
+            print(error.localizedDescription)
         }
-        
-        databaseHandleLab = compRef.observe(DataEventType.value, with: { (snapshot) in
-            
-            let comp = snapshot.value as? String
-            
-            if let actualcomp = comp {
-                print(actualcomp)
-                self.computernumber = actualcomp
-            }
-        }) { (Error) in
-            
-        }
-        
-        databaseHandleLab = floorRef.observe(DataEventType.value, with: { (snapshot) in
-            
-            let floor = snapshot.value as? String
-            
-            if let actualfloor = floor {
-                print(actualfloor)
-                self.floornumber = actualfloor
-            }
-        }) { (Error) in
-            
-        }
-*/
-        
+        */
         
         // Get an instance of the AVCaptureDevice class to initialize a device object and provide the video as the media type parameter.
+        
+//        let qrRef = labsRef.child("PC_01_L301")
+        
+        
         let captureDevice = AVCaptureDevice.defaultDevice(withMediaType: AVMediaTypeVideo)
         
         do {
@@ -176,17 +156,17 @@ class ViewController: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
             
             if metadataObj.stringValue != nil {
                 
-                let qrRef = labsRef.child(metadataObj.stringValue)
-                messageLabel.text = qrRef.key
-                sendEmail(qrRef: qrRef)
+               var qrReaded = metadataObj.stringValue
+                messageLabel.text = metadataObj.stringValue
+                callDatabase(qr: qrReaded!)
             }
         }
     }
     
-    
-    func sendEmail( qrRef: DatabaseReference) {
+    func callDatabase(qr: String){
         
-       
+        let ref = Database.database().reference().child("Labs")
+        let qrRef = ref.child(qr)
         let labnumRef = qrRef.child("Laboratorio")
         let compRef = qrRef.child("Computadora")
         let floorRef = qrRef.child("Piso")
@@ -198,7 +178,7 @@ class ViewController: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
             if let actualLab = lab {
                 print(actualLab)
                 self.labnumber = actualLab
-            }
+                            }
         }) { (Error) in
             
         }
@@ -222,10 +202,19 @@ class ViewController: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
             if let actualfloor = floor {
                 print(actualfloor)
                 self.floornumber = actualfloor
+                self.sendEmail( )
             }
         }) { (Error) in
             
         }
+
+    
+    }
+    
+    
+    func sendEmail( ) {
+        
+       
         
         let composeVC = MFMailComposeViewController()
         composeVC.mailComposeDelegate = self as? MFMailComposeViewControllerDelegate
