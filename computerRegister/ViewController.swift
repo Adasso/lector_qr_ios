@@ -12,7 +12,7 @@ import Firebase
 import MessageUI
 
 
-class ViewController: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
+class ViewController: UIViewController, AVCaptureMetadataOutputObjectsDelegate, MFMailComposeViewControllerDelegate {
     
     @IBOutlet var messageLabel:UILabel!
     @IBOutlet var topbar: UIView!
@@ -171,66 +171,67 @@ class ViewController: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
         let compRef = qrRef.child("Computadora")
         let floorRef = qrRef.child("Piso")
         
-        databaseHandleLab = labnumRef.observe(DataEventType.value, with: { (snapshot) in
-            
-            let lab = snapshot.value as? String
-            
-            if let actualLab = lab {
-                print(actualLab)
-                self.labnumber = actualLab
-                            }
-        }) { (Error) in
-            
-        }
-        
-        databaseHandleLab = compRef.observe(DataEventType.value, with: { (snapshot) in
-            
-            let comp = snapshot.value as? String
-            
-            if let actualcomp = comp {
-                print(actualcomp)
-                self.computernumber = actualcomp
-            }
-        }) { (Error) in
-            
-        }
-        
-        databaseHandleLab = floorRef.observe(DataEventType.value, with: { (snapshot) in
-            
-            let floor = snapshot.value as? String
-            
-            if let actualfloor = floor {
-                print(actualfloor)
-                self.floornumber = actualfloor
-                self.sendEmail( )
-            }
-        }) { (Error) in
-            
-        }
+        databaseHandleLab = qrRef.observe(DataEventType.value, with: { (snapshot) in
+            if ( snapshot.value is NSNull ) {
+                print("not found")
+            } else {
+                
+                if let dictionary = snapshot.value as? [String : AnyObject] {
+                    
+                    
+                     self.labnumber = dictionary["Laboratorio"] as! String
+                     self.computernumber = dictionary["Computadora"] as! String
+                     self.floornumber = dictionary["Piso"] as! String
+                    print("lab :" + self.labnumber + "Computadora : " + self.computernumber + "Piso : " + self.floornumber)
+                    if (self.labnumber != nil && self.computernumber != nil && self.floornumber != nil){
+                         self.captureSession?.stopRunning();
+                     self.sendEmail( )
+                    }
 
+                }
+           
+            }
+        }) { (Error) in
+            
+        }
+        
+      
     
     }
     
     
     func sendEmail( ) {
         
-       
         
-        let composeVC = MFMailComposeViewController()
-        composeVC.mailComposeDelegate = self as? MFMailComposeViewControllerDelegate
-        // Configure the fields of the interface.
-        composeVC.setToRecipients(["address@example.com"])
-        composeVC.setSubject("Falla de computadora "+labnumber)
-        composeVC.setMessageBody("Problemas: \n\n Laboratorio: "+labnumber+"\n Piso: "+floornumber+"\n Computadora: "+computernumber+"\n\n Descripción:\n\n", isHTML: false)
-        // Present the view controller modally.
-        self.present(composeVC, animated: true, completion: nil)
+        let mailComposeViewController = configuredMailComposeViewController()
+        if MFMailComposeViewController.canSendMail() {
+            self.present(mailComposeViewController, animated: true, completion: nil)
+        } else {
+            self.showSendMailErrorAlert()
+        }
     }
     
-    func mailComposeController(controller: MFMailComposeViewController,
-                               didFinishWithResult result: MFMailComposeResult, error: NSError?) {
-        // Check the result or perform other tasks.
-        // Dismiss the mail compose view controller.
+    func configuredMailComposeViewController() -> MFMailComposeViewController {
+        let mailComposerVC = MFMailComposeViewController()
+        mailComposerVC.mailComposeDelegate = self as! MFMailComposeViewControllerDelegate // Extremely important to set the --mailComposeDelegate-- property, NOT the --delegate-- property
+        
+        mailComposerVC.setToRecipients(["alvaro.dasso@utec.edu.pe"])
+        mailComposerVC.setSubject("Falla de computadora "+labnumber)
+        mailComposerVC.setMessageBody("Problemas: \n\n Laboratorio: "+labnumber+"\n Piso: "+floornumber+"\n Computadora: "+computernumber+"\n\n Descripción:\n\n", isHTML: false)
+        
+        return mailComposerVC
+    }
+    
+    func showSendMailErrorAlert() {
+        let sendMailErrorAlert = UIAlertView(title: "Could Not Send Email", message: "Your device could not send e-mail.  Please check e-mail configuration and try again.", delegate: self, cancelButtonTitle: "OK")
+        sendMailErrorAlert.show()
+    }
+    
+    // MARK: MFMailComposeViewControllerDelegate Method
+    func mailComposeController(_ controller: MFMailComposeViewController, didFinishWith result: MFMailComposeResult, error: Error?) {
         controller.dismiss(animated: true, completion: nil)
+        
+        dismiss(animated: true, completion: nil)
     }
     /*func sendEmail(){
         let userID = Auth.auth().currentUser?.uid
@@ -245,6 +246,13 @@ class ViewController: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
             print(error.localizedDescription)
         }
     }*/
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        
+        if (captureSession?.isRunning == true) {
+            captureSession?.stopRunning();
+        }
+    }
 
 
 }
